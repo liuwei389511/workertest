@@ -6,7 +6,7 @@
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "workertest",
 	"main": "src/index.js",
-	"compatibility_date": "2024-11-11",
+	"compatibility_date": "2025-05-10",
 	"observability": {
 		"enabled": true
 	}
