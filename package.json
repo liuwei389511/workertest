@@ -1,28 +1,25 @@
 {
-  "name": "workers-graphql-server",
-  "version": "2.0.0",
+  "name": "graphql-yoga-cloudflare-workers",
+  "description": "Fully-featured, simple to set up, performant and extendable GraphQL server",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "deploy": "wrangler deploy",
     "dev": "wrangler dev",
     "start": "wrangler dev",
-    "cf-typegen": "wrangler types",
-    "codegen": "graphql-codegen --config codegen.ts"
-  },
-  "devDependencies": {
-    "@cloudflare/workers-types": "^4.20250510.0",
-    "@graphql-codegen/cli": "5.0.3",
-    "@graphql-codegen/introspection": "4.0.3",
-    "@graphql-codegen/typescript": "4.1.0",
-    "@graphql-codegen/typescript-resolvers": "4.3.0",
-    "graphql-codegen-typescript-common": "0.18.2",
-    "typescript": "^5.5.2",
-    "wrangler": "^4.14.4"
+    "test": "vitest"
   },
   "dependencies": {
-    "@apollo/server": "^4.11.0",
-    "@as-integrations/cloudflare-workers": "^1.0.2",
-    "graphql": "^16.9.0",
-    "hono": "^4.6.5"
+    "graphql": "16.10.0",
+    "graphql-yoga": "5.10.11"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "0.6.8",
+    "@cloudflare/workers-types": "4.20250124.3",
+    "@types/service-worker-mock": "2.0.4",
+    "service-worker-mock": "2.0.5",
+    "typescript": "5.7.3",
+    "vitest": "3.0.4",
+    "wrangler": "4.14.4"
   }
 }

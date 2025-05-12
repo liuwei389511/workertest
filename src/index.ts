@@ -1,85 +1,95 @@
-import { Context, Hono } from 'hono'
-import { cors } from 'hono/cors'
+/**
+ * Welcome to Cloudflare Workers! This is your first worker.
+ *
+ * - Run `npm run dev` in your terminal to start a development server
+ * - Open a browser tab at http://localhost:8787/ to see your worker in action
+ * - Run `npm run deploy` to publish your worker
+ *
+ * Learn more at https://developers.cloudflare.com/workers/
+ */
 
-// Imported from Hono since it isn't exported
-type CORSOptions = {
-  origin:
-    | string
-    | string[]
-    | ((origin: string, c: Context) => string | undefined | null)
-  allowMethods?: string[]
-  allowHeaders?: string[]
-  maxAge?: number
-  credentials?: boolean
-  exposeHeaders?: string[]
+import { createSchema, createYoga } from "graphql-yoga";
+
+export interface Env {
+	// Example binding to KV. Learn more at https://developers.cloudflare.com/workers/runtime-apis/kv/
+	// MY_KV_NAMESPACE: KVNamespace;
+	//
+	// Example binding to Durable Object. Learn more at https://developers.cloudflare.com/workers/runtime-apis/durable-objects/
+	// MY_DURABLE_OBJECT: DurableObjectNamespace;
+	//
+	// Example binding to R2. Learn more at https://developers.cloudflare.com/workers/runtime-apis/r2/
+	// MY_BUCKET: R2Bucket;
+	//
+	// Example binding to a Service. Learn more at https://developers.cloudflare.com/workers/runtime-apis/service-bindings/
+	// MY_SERVICE: Fetcher;
+	//
+	// Example binding to a Queue. Learn more at https://developers.cloudflare.com/queues/javascript-apis/
+	// MY_QUEUE: Queue;
 }
 
-import Apollo from './handlers/apollo'
+const yoga = createYoga<Env>({
+	schema: createSchema({
+		typeDefs: /* GraphQL */ `
+	  type PokemonSprites {
+		front_default: String!
+		front_shiny: String!
+		front_female: String!
+		front_shiny_female: String!
+		back_default: String!
+		back_shiny: String!
+		back_female: String!
+		back_shiny_female: String!
+	  }
+	  type Pokemon {
+		id: ID!
+		name: String!
+		height: Int!
+		weight: Int!
+		sprites: PokemonSprites!
+	  }
+	  type Query {
+		pokemon(id: ID!): Pokemon
+	  }
+		  `,
+		resolvers: {
+			Query: {
+				pokemon: async (_parent, { id }) => {
+					const result = await fetch(
+						new Request(`https://pokeapi.co/api/v2/pokemon/${id}`),
+						{
+							cf: {
+								// Always cache this fetch regardless of content type
+								// for a max of 1 min before revalidating the resource
+								cacheTtl: 50,
+								cacheEverything: true,
+							},
+						}
+					);
+					return await result.json();
+				},
+			},
+		},
+	}),
+	graphiql: {
+		defaultQuery: /* GraphQL */ `
+		query samplePokeAPIquery {
+		  pokemon: pokemon(id: 1) {
+			id
+			name
+			height
+			weight
+			sprites {
+			  front_shiny
+			  back_shiny
+			}
+		  }
+		}
+	  `,
+	},
+});
 
-export type GraphQLServerOptions = {
-  baseEndpoint: string
-  enableSandbox: boolean
-  forwardUnmatchedRequestsToOrigin: boolean
-  cors: boolean | CORSOptions
-  kvCache: boolean
-}
-
-export type Bindings = {
-  KV_CACHE?: KVNamespace
-}
-
-const graphQLServerOptions: GraphQLServerOptions = {
-  // Set the path for the GraphQL server
-  baseEndpoint: '/',
-
-  // Enable the Apollo Sandbox
-  enableSandbox: true,
-
-  // When a request's path isn't matched, forward it to the origin
-  forwardUnmatchedRequestsToOrigin: false,
-
-  // Enable CORS headers on GraphQL requests
-  // Set to `true` for defaults (see `utils/setCors`),
-  // or pass an object to configure each header
-  cors: true,
-  // cors: {
-  //   allowHeaders: ['Content-type'],
-  //   allowMethods: ['GET', 'POST', 'PUT'],
-  //   credentials: true,
-  //   origin: '*',
-  // },
-
-  // Enable KV caching for external REST data source requests
-  // Note that you'll need to add a KV namespace called
-  // WORKERS_GRAPHQL_CACHE in your wrangler.toml file for this to
-  // work! See the project README for more information.
-  kvCache: false,
-}
-
-const app = new Hono<{ Bindings: Bindings }>()
-
-app.all(graphQLServerOptions.baseEndpoint, (context) => {
-  return Apollo(context, graphQLServerOptions)
-})
-
-app.all('*', async (c) => {
-  if (graphQLServerOptions.forwardUnmatchedRequestsToOrigin) {
-    return fetch(c.req.raw)
-  }
-  return new Response('Not found', { status: 404 })
-})
-
-if (graphQLServerOptions.cors) {
-  if (typeof graphQLServerOptions.cors === 'boolean') {
-    app.use(cors())
-  } else {
-    app.use(cors(graphQLServerOptions.cors))
-  }
-}
-
-app.onError((err, c) => {
-  console.error(err)
-  return c.text('Something went wrong', 500)
-})
-
-export default app
+export default {
+	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+		return yoga.fetch(request, env);
+	},
+};

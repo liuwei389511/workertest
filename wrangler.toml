@@ -3,16 +3,11 @@
 # https://developers.cloudflare.com/workers/wrangler/configuration/
 name = "workertest"
 main = "src/index.ts"
-compatibility_date = "2024-10-11"
+compatibility_date = "2024-03-29"
 compatibility_flags = [ "nodejs_compat" ]
 
 [observability]
 enabled = true
-
-[[rules]]
-type = "Text"
-globs = [ "**/*.graphql" ]
-fallthrough = true
 
 # Smart Placement
 # Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement

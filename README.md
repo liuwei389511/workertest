@@ -1,135 +1,142 @@
-# workers-graphql-server
+<p align="center"><img src="https://github.com/dotansimha/graphql-yoga/raw/master/website/public/banner.svg" width="350" /></p>
 
-An [Apollo GraphQL](https://www.apollographql.com/) server, built with [Cloudflare Workers](https://workers.cloudflare.com).
+# GraphQL Yoga for Cloudflare Workers (Wrangler template)
 
-Whether you host your APIs on-prem, in the cloud, or you're deploying [databases](https://developers.cloudflare.com/d1) to Cloudflare directly, you can deploy a globally distributed GraphQL server with Cloudflare Workers.
+Fully-featured GraphQL Server with focus on easy setup, performance & great developer experience:
 
-## Setup
+- **Easiest way to run a GraphQL server:** Sensible defaults & includes everything you need with minimal setup (we also export a platform/env-agnostic handler so you can build your own wrappers easily).
+- **Includes Subscriptions:** Built-in support for GraphQL subscriptions using **S**erver-**S**ent **E**vents.
+- **Compatible:** Works with all GraphQL clients (Apollo, Relay...) and fits seamless in your GraphQL workflow.
+- **WHATWG Fetch API:** the core package depends on [WHATWG Fetch API](https://fetch.spec.whatwg.org/) so it can run and deploy on any environment (Serverless, Workers, Deno, Node).
+- **Easily Extendable:** New GraphQL-Yoga support all [`envelop`](https://www.envelop.dev) plugins.
 
-Begin by cloning this repo and installing the dependencies:
+
+<br />
+
+[**See it in action!**](https://my-yoga-worker.cpolyeng.workers.dev)
+
+<br />
+
+[Read the 2.0 announcement blog post](https://www.the-guild.dev/blog/announcing-graphql-yoga-v2)
+
+[Read the docs](https://www.graphql-yoga.com/docs/quick-start)
+
+
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/the-guild-org/yoga-cloudflare-workers-template)
+
+<p>&nbsp;</p>
+
+----
+
+<p>&nbsp;</p>
+
+## Getting started
+
+
+1. Install and configure wrangler
 
 ```sh
-$ git clone https://github.com/cloudflare/workers-graphql-server
-$ npm install
+npm i @cloudflare/wrangler -g
+
+wrangler login
 ```
 
-You can begin running the project locally by running `npm run dev`.
 
-You'll need to configure your project's `wrangler.toml` file to prepare your project for deployment. See the ["Configuration"](https://developers.cloudflare.com/workers/cli-wrangler/configuration/) docs for a guide on how to do this.
+2. Create a new project with the GraphQL Yoga template
 
-## Usage
-
-The source for this project shows how to make requests to external APIs, using the [PokeAPI](https://pokeapi.co/) as an example. You can run an example query to ensure it works after deployment:
-
-```graphql
-query {
-  pokemon: pokemon(id: 1) {
-    id
-    name
-    height
-    weight
-    sprites {
-      front_shiny
-      back_shiny
-    }
-  }
-}
+```sh
+ wrangler generate graphql-yoga-worker https://github.com/the-guild-org/yoga-cloudflare-workers-template
 ```
 
-Resolvers are defined in `src/resolvers.ts`. You can also use [Service Bindings](https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/) to connect to other Workers services, and use them inside your resolvers.
 
-If you change your GraphQL schema at `src/schema.graphql`, you'll need to run `npm run codegen` to update the generated types in `src/generated/graphql.ts`. This ensures that you can correctly import and type your resolvers.
+3. Build and deploy your CF Worker GraphQL API
 
-## Configuration
-
-You can optionally configure your `graphQLOptions` object in `src/index.js`:
-
-```js
-const graphQLOptions = {
-  baseEndpoint: '/',
-  enableSandbox: true,
-  forwardUnmatchedRequestsToOrigin: false,
-  cors: true,
-  kvCache: false,
-}
+```sh
+cd graphql-yoga-worker
+wrangler build
+wrangler publish
 ```
 
-### Base endpoint
+<p>&nbsp;</p>
 
-Make requests to your GraphQL server by sending `POST` requests to the `baseEndpoint` (e.g. `graphql-on-workers.signalnerve.com/`).
+----
 
-### Sandbox
+<p>&nbsp;</p>
 
-By default, the Apollo Sandbox is enabled. This allows you to test your GraphQL in a web GUI without needing to write any client code.
+## Project overview
 
-### Origin forwarding
+### Yoga configuration
 
-If you run your GraphQL server on a domain already registered with Cloudflare, you may want to pass any unmatched requests from inside your Workers script to your origin: in that case, set `forwardUnmatchedRequestToOrigin` to true (if you're running a GraphQL server on a [Workers.dev](https://workers.dev) subdomain, the default of `false` is fine).
+GraphQL Yoga comes with defaults for CORS and error handling:
+- CORS are enabled by default
+- Automatically masking unexpected errors and preventing sensitive information leaking to clients.
 
-### Debugging
+Yoga also brings support (with no additional dependency) for subscriptions, file uploads and your favourite schema building library (GraphQL Tools, Pothos, Nexus, TypeGraphQL, SDL first schema-design approaches, graphql-js, Apollo Tools).
 
-While configuring your server, you may want to set the `debug` flag to `true`, to return script errors in your browser. This can be useful for debugging any errors while setting up your GraphQL server, but should be disabled on a production server.
 
-### CORS
+More information on all available features [on the official documentation](https://www.graphql-yoga.com/docs/quick-start).
 
-By default, the `cors` option allows cross-origin requests to the server from any origin. You may wish to configure it to whitelist specific origins, methods, or headers. This is done by passing an object to `cors`, which is based on the [hono/cors](https://hono.dev/docs/middleware/builtin/cors) middleware:
+<p>&nbsp;</p>
 
-```js
-const graphQLOptions = {
-  // ... other options ...
+### Envelop Plugins
 
-  cors: {
-    origin: 'http://example.com',
-    allowHeaders: ['X-Custom-Header', 'Upgrade-Insecure-Requests'],
-    allowMethods: ['POST', 'GET', 'OPTIONS'],
-    exposeHeaders: ['Content-Length', 'X-Kuma-Revision'],
-    maxAge: 600,
-    credentials: true,
-  },
-}
-```
+GraphQL Yoga is built on top of [Envelop](https://www.envelop.dev/).
+[Envelop](https://www.envelop.dev/) is a library that helps build GraphQL API faster and flexibly with plugin-based architecture.
+
+Similar to Express middlewares allowing you to customize requests' behavior, Envelop applies the same idea to GraphQL requests.
+
+By exposing hooks in all the phases of a GraphQL Request execution, Envelop enables the creation of plugins that simplify the setup of standard API features such as:
+- Security: Depth limits, Rate limiting
+- Authentication
+- Advanced caching
+- Error handling: Sentry, error masking
+- Monitoring: Hive
+- Logging
+- Tracing: NewRelic, Datadog, StatsD, Apollo Tracing
+
+More information on [Envelop documentation](https://www.envelop.dev/docs).
+
+
+_Note: Some Node.js specific plugins such as `useSentry()` are supported in Serverless environments_
+
+<p>&nbsp;</p>
 
 ### Caching
 
-This project includes support for using Workers KV as a cache in your resolvers. To use caching in your project, [create a new KV namespace](https://workers.cloudflare.com/docs/reference/storage/writing-data), and in `wrangler.toml`, configure your namespace, calling it `KV_CACHE` (note that this binding name is _required_, currently):
+GraphQL Yoga is relying on `fetch()` WHATWG Fetch API, allowing you to [leverage Cloudflare Cache](https://developers.cloudflare.com/workers/examples/cache-using-fetch/) when fetching data from external services.
 
-```toml
-# wrangler.toml
+For more advanced use-cases, please refer to the `useResponseCache()` Envelop plugins, with a Redis cache (memory cache is not supported on Serverless).
 
-[[kv-namespaces]]
-binding = "KV_CACHE"
-id = "$myId"
-```
 
-With a configured KV namespace set up, you can opt-in to KV caching by changing the `kvCache` config value in `graphQLOptions` (in `index.js`) to `true`.
+<p>&nbsp;</p>
 
-In any resolver function, you can access the `cache` object, which is an instance of [`KVCache`](https://github.com/cloudflare/workers-graphql-server/blob/master/src/kv-cache.ts). You can use `.get` and `.set` to interact with the cache:
+### Bundle size
 
-```ts
-pokemon: async (_parent, { id }, { cache }) => {
-  if (cache) {
-    const pokemon = await cache.get(id)
-    if (pokemon) {
-      return pokemon
-    }
-  }
+**GraphQL Yoga bundle is 36% lighter than Apollo Cloudflare Server** (_Wrangler bundled script comparison_), leading is a faster startup and deployment time. ⚡️
 
-  // You can hook into any util functions, API wrappers, or other
-  // code that you need to resolve your query.
-  const pokemonData = await PokemonAPI.getPokemon(id)
 
-  // You can also cache the data if you need to, with an optional TTL
-  if (cache) await cache.set(id, pokemonData, { ttl: 60 })
-  return pokemonData
-},
-```
 
-## Credits
 
-This project is heavily based on the [@as-integrations/cloudflare-workers](https://github.com/apollo-server-integrations/apollo-server-integration-cloudflare-workers) package, which is a great tool for building GraphQL servers with Cloudflare Workers.
+<p>&nbsp;</p>
 
-It is built with [Hono](https://github.com/honojs/hono), a simple and powerful web framework for Cloudflare Workers.
+----
+
+<p>&nbsp;</p>
+
+## Going futher
+
+- [GraphQL Yoga features documentation](https://www.graphql-yoga.com/docs/quick-start)
+- [GraphQL Yoga on Cloudflare Workers](https://www.graphql-yoga.com/docs/integrations/integration-with-cloudflare-workers)
+
+
+
+<p>&nbsp;</p>
+
+----
+
+<p>&nbsp;</p>
+
 
 ## License
 
-This project is licensed with the [MIT License](https://github.com/cloudflare/workers-graphql-server/blob/master/LICENSE).
+This project is licensed with the [MIT License](./LICENSE).
